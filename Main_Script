@@ -1,0 +1,50 @@
+const WebSocket = require('ws');
+
+const oAuth = "213.....12412aad9v";
+const user = "some_name_doesn't_matter";
+const channel = "Chanel_name";
+
+const socket = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
+
+let cooldownsstats = 0; 
+
+// Cooldown duration in milliseconds (e.g., 30 seconds)
+const cooldownDuration = 60000;
+
+// Keywords and their associated cooldown states
+const commands = [
+  { keyword: "xd", message: "xd", cooldown: false },
+  { keyword: "uuh", message: "uuh", cooldown: false }
+];
+
+socket.on('open', () => {
+  socket.send(`PASS oauth:${oAuth}`);
+  socket.send(`NICK ${user}`);
+  socket.send(`JOIN #${channel}`);
+});
+
+socket.on('message', (data) => {
+  // Handling the events with cooldowns dynamically
+  commands.forEach((command) => {
+    if (data.includes(command.keyword) && !command.cooldown) {
+      socket.send(`PRIVMSG #${channel} :${command.message}`);
+      command.cooldown = true;
+      setTimeout(() => command.cooldown = false, cooldownDuration);
+      cooldownsstats ++;
+      console.log(cooldownsstats); //can remove (just to monitor how many messages u send)
+    }
+  });
+
+  // Handle PING to keep the connection alive
+  if (data.includes("PING")) {
+    socket.send("PONG");
+  }
+});
+
+socket.on('error', (err) => {
+  console.error('Error occurred:', err);
+});
+
+socket.on('close', () => {
+  console.log('Disconnected from the server');
+});
